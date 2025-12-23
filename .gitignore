@@ -1,0 +1,17 @@
+# Python virtual environment
+venv/
+# Python
+venv/
+*.pyc
+__pycache__/
+
+# React
+node_modules/
+dist/
+build/
+
+# Flutter
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/

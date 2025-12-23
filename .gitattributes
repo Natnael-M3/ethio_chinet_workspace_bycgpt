@@ -1,0 +1,18 @@
+# Force text files to use LF in repo
+* text=auto
+
+# Specific for scripts
+*.py text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+
+# Ignore binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
+*.exe binary
+*.dll binary
