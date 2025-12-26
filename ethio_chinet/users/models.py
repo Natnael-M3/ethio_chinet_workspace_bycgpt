@@ -13,6 +13,66 @@ class UserManager(BaseUserManager):
             raise ValueError("Phone number is required")
 
         user = self.model(phone_number=phone_number, **extra_fields)
+        if password:
+            user.set_password(password)
+
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, phone_number, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("user_type", "admin")
+
+        return self.create_user(phone_number, password, **extra_fields)
+
+    def create_user(self, phone_number, password=None, **extra_fields):
+        if not phone_number:
+            raise ValueError("Phone number is required")
+
+        user = self.model(phone_number=phone_number, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, phone_number, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('user_type', 'admin')
+
+        return self.create_user(phone_number, password, **extra_fields)
+
+    def create_user(self, phone_number, password=None, first_name=None, last_name=None, **extra_fields):
+        if not phone_number:
+            raise ValueError("Phone number is required")
+
+        user = self.model(
+            phone_number=phone_number,
+            first_name=first_name,
+            last_name=last_name,
+            **extra_fields
+        )
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, phone_number, password=None, first_name=None, last_name=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('user_type', 'admin')
+
+        if first_name is None:
+            raise ValueError('Superuser must have a first name.')
+        if last_name is None:
+            raise ValueError('Superuser must have a last name.')
+
+        return self.create_user(phone_number, password, first_name=first_name, last_name=last_name, **extra_fields)
+
+    def create_user(self, phone_number, password=None, **extra_fields):
+        if not phone_number:
+            raise ValueError("Phone number is required")
+
+        user = self.model(phone_number=phone_number, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -37,6 +97,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=255,null=True, blank=True)
     otp = models.CharField(max_length=6, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    
     user_type = models.CharField(
         max_length=20,
         choices=USER_TYPE_CHOICES,
@@ -85,7 +146,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # REQUIRED BY DJANGO
     USERNAME_FIELD = 'phone_number'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['first_name', 'last_name']
 
     objects = UserManager()
 

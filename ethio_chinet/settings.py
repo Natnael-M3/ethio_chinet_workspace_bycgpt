@@ -47,12 +47,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'users',
     'payments',
     'posts',
     'vehicles',
     'ratings',
     'locations',
+    
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -80,8 +82,10 @@ REST_FRAMEWORK = {
 
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Adjust as needed
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # Adjust as needed
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 TEMPLATES = [
@@ -106,9 +110,13 @@ WSGI_APPLICATION = 'wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+     'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ethio_chinet_db',
+        'USER': 'postgres',
+        'PASSWORD': 'supernati',
+        'HOST': 'localhost',  # or your server IP
+        'PORT': '5432',
     }
 }
 

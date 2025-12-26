@@ -11,4 +11,7 @@ urlpatterns = [
     path('api/payments/', include('payments.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # POST: get access & refresh tokens
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # POST: refresh access token
+    path('api/locations/', include('locations.urls')),  # <-- make sure this line exists
+    # Vehicle endpoint
+    path('api/vehicles/', include('vehicles.urls')),
 ]

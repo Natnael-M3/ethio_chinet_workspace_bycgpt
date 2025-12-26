@@ -74,6 +74,6 @@ class PostListSerializer(serializers.ModelSerializer):
             'pickup_location_name',
             'dropoff_location_name',
             'required_date',
-            'post_status',       # ⚠️ confirm model field name
-            'is_post_expired',   # ⚠️ confirm model field name
+            'status',     
+            'is_expired'  
         ]

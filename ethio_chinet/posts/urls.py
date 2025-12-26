@@ -19,6 +19,7 @@ urlpatterns = [
     path('admin/taken/', AdminTakenPostsView.as_view()),
     path('admin/finish/<int:post_id>/', AdminFinishPostView.as_view()),
     path('admin/release/<int:post_id>/', AdminReleasePostView.as_view()),
+
 ]
 
 

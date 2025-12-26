@@ -1,6 +1,10 @@
-from django.urls import path
-from .views import LocationAutocompleteView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import LocationViewSet
+
+router = DefaultRouter()
+router.register(r'', LocationViewSet)  # empty string for cleaner URL
 
 urlpatterns = [
-    path('autocomplete/', LocationAutocompleteView.as_view()),
+    path('', include(router.urls)),
 ]

@@ -15,3 +15,17 @@ class SendOTPSerializer(serializers.Serializer):
 class VerifyOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
     otp = serializers.IntegerField()
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'phone_number', 'status', 'is_staff']
+
+    def update(self, instance, validated_data):
+        # Prevent non-admins from updating the status
+        request = self.context.get('request')
+        if 'status' in validated_data:
+            if not request.user.is_staff:  # only admins can change status
+                validated_data.pop('status')
+        return super().update(instance, validated_data)
+

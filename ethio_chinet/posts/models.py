@@ -1,21 +1,14 @@
 from django.db import models
+from django.utils import timezone
 
 class Post(models.Model):
-    # class Meta:
-    #     indexes = [
-    #         models.Index(fields=['vehicle_type', 'load_type']),
-    #         models.Index(fields=['status']),
-    #         models.Index(fields=['post_code']),
-    #         models.Index(fields=['required_date']),
-    #         models.Index(fields=['pickup_location']),
-    #     ]
     STATUS_CHOICES = (
         ('posted', 'Posted'),
         ('taken', 'Taken'),
         ('finished', 'Finished'),
     )
 
-    post_code = models.CharField(max_length=6, db_index=True)
+    post_code = models.CharField(max_length=6, db_index=True, editable=False)
 
     customer = models.ForeignKey(
         'users.User',
@@ -64,16 +57,19 @@ class Post(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='Posted'
+        default='posted'
     )
+
     current_latitude = models.FloatField(null=True, blank=True)
     current_longitude = models.FloatField(null=True, blank=True)
     location_updated_at = models.DateTimeField(null=True, blank=True)
     required_date = models.DateTimeField()
     expires_at = models.DateTimeField()
-    is_expired = models.BooleanField(default=False)
-
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_expired(self):
+        return self.expires_at <= timezone.now()
 
     def __str__(self):
         return self.post_code
