@@ -14,4 +14,10 @@ urlpatterns = [
     path('api/locations/', include('locations.urls')),  # <-- make sure this line exists
     # Vehicle endpoint
     path('api/vehicles/', include('vehicles.urls')),
+    #luggages endpoint
+    path('api/luggage/', include('luggages.urls')),
+    #load types endpoint
+    path('api/load-types/', include('loadtypes.urls')),
+    path("api/", include("users.urls")),
+
 ]

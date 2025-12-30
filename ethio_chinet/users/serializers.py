@@ -28,4 +28,14 @@ class UserSerializer(serializers.ModelSerializer):
             if not request.user.is_staff:  # only admins can change status
                 validated_data.pop('status')
         return super().update(instance, validated_data)
+class UserStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["status"]
 
+    def validate_status(self, value):
+        if value not in ["active", "suspended"]:
+            raise serializers.ValidationError(
+                "Status must be either 'active' or 'suspended'."
+            )
+        return value

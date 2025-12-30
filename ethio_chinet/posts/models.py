@@ -1,75 +1,43 @@
 from django.db import models
-from django.utils import timezone
-
+from django.conf import settings
+import uuid
+from luggages.models import Luggage
+from loadtypes.models import LoadType
 class Post(models.Model):
-    STATUS_CHOICES = (
+    STATUS_CHOICES = [
         ('posted', 'Posted'),
         ('taken', 'Taken'),
         ('finished', 'Finished'),
-    )
-
-    post_code = models.CharField(max_length=6, db_index=True, editable=False)
-
-    customer = models.ForeignKey(
-        'users.User',
-        related_name='customer_posts',
-        on_delete=models.CASCADE
-    )
-
-    driver = models.ForeignKey(
-        'users.User',
-        related_name='driver_posts',
-        on_delete=models.SET_NULL,
+    ]
+    # LOAD_TYPE_CHOICES = [
+    #     ('solid', 'Solid'),
+    #     ('liquid', 'Liquid'),
+    # ]
+    luggage = models.ForeignKey(
+        Luggage,
+        on_delete=models.PROTECT,
+        related_name="posts",
         null=True,
         blank=True
     )
-
-    assigned_admin = models.ForeignKey(
-        'users.User',
-        related_name='admin_posts',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-
-    pickup_location = models.ForeignKey(
-        'locations.Location',
-        related_name='pickup_posts',
-        on_delete=models.PROTECT
-    )
-
-    dropoff_location = models.ForeignKey(
-        'locations.Location',
-        related_name='dropoff_posts',
-        on_delete=models.PROTECT
-    )
-
-    vehicle_type = models.ForeignKey(
-        'vehicles.VehicleType',
-        on_delete=models.PROTECT
-    )
-
     load_type = models.ForeignKey(
-        'vehicles.LoadType',
-        on_delete=models.PROTECT
+        LoadType,
+        on_delete=models.PROTECT,
+        related_name='posts'
     )
-
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='posted'
-    )
-
-    current_latitude = models.FloatField(null=True, blank=True)
-    current_longitude = models.FloatField(null=True, blank=True)
-    location_updated_at = models.DateTimeField(null=True, blank=True)
+    post_code = models.CharField(max_length=6, unique=True, editable=False)
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    pickup_location = models.ForeignKey('locations.Location', related_name='pickup_posts', on_delete=models.CASCADE)
+    dropoff_location = models.ForeignKey('locations.Location', related_name='dropoff_posts', on_delete=models.CASCADE)
+    vehicle_type = models.ForeignKey('vehicles.VehicleType', on_delete=models.CASCADE)
     required_date = models.DateTimeField()
-    expires_at = models.DateTimeField()
+    load_type = models.ForeignKey(LoadType, on_delete=models.PROTECT)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='posted')
+    driver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_posts')
+    assigned_admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_posts')
     created_at = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def is_expired(self):
-        return self.expires_at <= timezone.now()
-
-    def __str__(self):
-        return self.post_code
+    description = models.TextField( null=True,blank=True)
+    def save(self, *args, **kwargs):
+        if not self.post_code:
+            self.post_code = uuid.uuid4().hex[:6].upper()
+        super().save(*args, **kwargs)

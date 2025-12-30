@@ -5,12 +5,14 @@ from .views import (
     VehicleTypeViewSet,
     VehicleRegionViewSet,
     VehicleCodeViewSet,
+    LoadTypeViewSet
 )
 
 router = DefaultRouter()
 router.register(r'vehicle-types', VehicleTypeViewSet, basename='vehicle-type')
 router.register(r'vehicle-regions', VehicleRegionViewSet, basename='vehicle-region')
 router.register(r'vehicle-codes', VehicleCodeViewSet, basename='vehicle-code')
+router.register(r'load-types', LoadTypeViewSet, basename='load-type')
 router.register(r'', VehicleViewSet, basename='vehicle')  # driver endpoint
 
 urlpatterns = [

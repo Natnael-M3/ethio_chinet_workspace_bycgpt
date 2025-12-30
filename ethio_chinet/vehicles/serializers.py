@@ -1,6 +1,11 @@
 from rest_framework import serializers
-from .models import Vehicle, VehicleType, VehicleRegion, VehicleCode
+from .models import Vehicle, VehicleType, VehicleRegion, VehicleCode, LoadType
 
+
+class LoadTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoadType
+        fields = ['id', 'name']
 class VehicleTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleType
@@ -18,18 +23,20 @@ class VehicleCodeSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ['plate_number', 'vehicle_type', 'vehicle_region', 'vehicle_code', 'load_type', 'capacity_kg']
+        fields = ['id','plate_number', 'vehicle_type', 'vehicle_region', 'vehicle_code', 'load_type', 'capacity_kg']
 
     def create(self, validated_data):
         user = self.context['request'].user
         if user.user_type != 'driver':
             raise serializers.ValidationError("Only drivers can register vehicles")
         
-        # Ensure driver has only one vehicle
+        
         if hasattr(user, 'vehicle'):
             raise serializers.ValidationError("Driver already has a vehicle registered")
 
         vehicle = Vehicle.objects.create(driver=user, **validated_data)
+        validated_data["driver"] = user
+        
         return vehicle
 
     def update(self, instance, validated_data):

@@ -12,12 +12,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Location',
+            name='LoadType',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('location_name', models.CharField(max_length=255)),
-                ('latitude', models.FloatField()),
-                ('longitude', models.FloatField()),
+                ('name', models.CharField(max_length=50, unique=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
+            options={
+                'verbose_name': 'Load Type',
+                'verbose_name_plural': 'Load Types',
+            },
         ),
     ]

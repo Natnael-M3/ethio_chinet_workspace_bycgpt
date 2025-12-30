@@ -1,285 +1,231 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from .services import haversine_distance
 from .models import Post
 from .serializers import PostCreateSerializer, PostListSerializer
-from django.utils import timezone
-from .services import haversine_distance
-from locations.models import Location
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
+from users.models import User
 from .models import Post
-from .serializers import PostCreateSerializer
-# CUSTOMER: Create Post
+from .serializers import (
+    DriverPostListSerializer,
+    DriverFinishedPostSerializer,
+)
 def admin_only(user):
     return user.user_type == 'admin'
+def get_serializer_class(self):
+    user = self.request.user
 
+    if user.user_type == 'driver':
+        return PostDriverListSerializer
+
+    return PostListSerializer
+# ------------------- CUSTOMER VIEWS -------------------
+
+
+    
 class CreatePostView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if request.user.user_type != 'customer':
+        if request.user.status == "suspended":
             return Response(
-                {"error": "Only customers can create posts"},
+                {
+                    "detail": "Your account is suspended. You cannot create posts."
+                },
                 status=status.HTTP_403_FORBIDDEN
             )
-
-        serializer = PostCreateSerializer(
-            data=request.data,
-            context={'request': request}
-        )
+        if request.user.user_type != 'customer':
+            return Response({"error": "Only customers can create posts"}, status=status.HTTP_403_FORBIDDEN)
+        serializer = PostCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        post = serializer.save()
+        post = serializer.save(customer=request.user)
+        return Response({"message": "Post created", "post_code": post.post_code}, status=status.HTTP_201_CREATED)
 
-        return Response(
-            {"message": "Post created", "post_code": post.post_code},
-            status=status.HTTP_201_CREATED
-        )
-
-
-# CUSTOMER: View Own Posts
 class CustomerPostsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         posts = Post.objects.filter(customer=request.user)
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data)
 
+# ------------------- ADMIN VIEWS -------------------
 
-# DRIVER: View Available Posts
-class DriverAvailablePostsView(APIView):
-    def get(self, request):
-        if request.user.user_type != 'driver':
-            return Response(
-                {"error": "Only drivers can view available posts"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        vehicle = request.user.current_vehicle
-        if not vehicle:
-            return Response(
-                {"error": "Driver has no vehicle assigned"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Mandatory filters FIRST
-        posts = Post.objects.filter(
-            status='Posted',
-            is_expired=False,
-            vehicle_type=vehicle.vehicle_type,
-            load_type=vehicle.load_type,
-            required_date__gte=timezone.now()
-        )
-
-        serializer = PostListSerializer(posts, many=True)
-        return Response(serializer.data)
 class AdminAvailablePostsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request):
         if not admin_only(request.user):
-            return Response(
-                {"error": "Admin access only"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        posts = Post.objects.filter(
-            status='Posted',
-            is_expired=False
-        )
-
+            return Response({"error": "Admin access only"}, status=status.HTTP_403_FORBIDDEN)
+        posts = Post.objects.filter(status='posted')
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data)
+
 class AdminTakePostView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, post_id):
         if not admin_only(request.user):
-            return Response(
-                {"error": "Admin access only"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+            return Response({"error": "Admin access only"}, status=status.HTTP_403_FORBIDDEN)
         try:
             post = Post.objects.get(id=post_id)
         except Post.DoesNotExist:
-            return Response(
-                {"error": "Post not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if post.status != 'Posted':
-            return Response(
-                {"error": "Post is not available"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        if post.status != 'posted':
+            return Response({"error": "Post is not available"}, status=status.HTTP_400_BAD_REQUEST)
 
         driver_id = request.data.get('driver_id')
-        if not driver_id:
-            return Response(
-                {"error": "driver_id is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         try:
-            driver = User.objects.get(
-                id=driver_id,
-                user_type='driver',
-                status='active'
-            )
+            driver = User.objects.get(id=driver_id, user_type='driver', status='active')
         except User.DoesNotExist:
-            return Response(
-                {"error": "Invalid driver"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Invalid driver"}, status=status.HTTP_400_BAD_REQUEST)
 
-        post.status = 'Taken'
+        post.status = 'taken'
         post.driver = driver
         post.assigned_admin = request.user
         post.save()
-
         return Response({"message": "Post taken successfully"})
+
 class AdminTakenPostsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         if not admin_only(request.user):
-            return Response(
-                {"error": "Admin access only"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        posts = Post.objects.filter(status='Taken')
+            return Response({"error": "Admin access only"}, status=status.HTTP_403_FORBIDDEN)
+        posts = Post.objects.filter(status='taken')
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data)
+
 class AdminFinishPostView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, post_id):
         if not admin_only(request.user):
-            return Response(
-                {"error": "Admin access only"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+            return Response({"error": "Admin access only"}, status=status.HTTP_403_FORBIDDEN)
         try:
             post = Post.objects.get(id=post_id)
         except Post.DoesNotExist:
-            return Response(
-                {"error": "Post not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if post.status != 'Taken':
-            return Response(
-                {"error": "Post is not in taken state"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        if post.status != 'taken':
+            return Response({"error": "Post is not in taken state"}, status=status.HTTP_400_BAD_REQUEST)
         if post.assigned_admin != request.user:
-            return Response(
-                {"error": "You are not assigned to this post"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+            return Response({"error": "You are not assigned to this post"}, status=status.HTTP_403_FORBIDDEN)
         post.status = 'Finished'
         post.save()
-
         return Response({"message": "Post finished successfully"})
+
 class AdminReleasePostView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def post(self, request, post_id):
         if not admin_only(request.user):
-            return Response(
-                {"error": "Admin access only"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+            return Response({"error": "Admin access only"}, status=status.HTTP_403_FORBIDDEN)
         try:
             post = Post.objects.get(id=post_id)
         except Post.DoesNotExist:
-            return Response(
-                {"error": "Post not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if post.status != 'Taken':
-            return Response(
-                {"error": "Post is not taken"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        if post.status != 'taken':
+            return Response({"error": "Post is not taken"}, status=status.HTTP_400_BAD_REQUEST)
         if post.assigned_admin != request.user:
-            return Response(
-                {"error": "You are not assigned to this post"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "You are not assigned to this post"}, status=status.HTTP_403_FORBIDDEN)
 
-        post.status = 'Posted'
+        post.status = 'posted'
         post.driver = None
         post.assigned_admin = None
         post.save()
-
         return Response({"message": "Post released back to available"})
 
 
+
+# 🚚 DRIVER: Available Posts
 class DriverAvailablePostsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        if request.user.user_type != 'driver':
+        user = request.user
+
+        if user.user_type != "driver":
             return Response(
-                {"error": "Driver access only"},
-                status=status.HTTP_403_FORBIDDEN
+                {"detail": "Driver access only"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-        driver = request.user
-
-        if not driver.current_vehicle:
+        if user.status == "suspended":
             return Response(
-                {"error": "Driver has no assigned vehicle"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Your account is suspended"},
+                status=status.HTTP_403_FORBIDDEN,
             )
-
-        if driver.current_latitude is None or driver.current_longitude is None:
+        current_vehicle = user.vehicles.first()
+        if not current_vehicle:
             return Response(
-                {"error": "Driver location not set"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "No vehicle assigned"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Optional filters
-        pickup_id = request.GET.get('pickup_location')
-        dropoff_id = request.GET.get('dropoff_location')
-        date_from = request.GET.get('date_from')
-        date_to = request.GET.get('date_to')
 
         posts = Post.objects.filter(
-            status='Posted',
+            status="posted",
             is_expired=False,
-            vehicle_type=driver.current_vehicle.vehicle_type,
-            load_type=driver.current_vehicle.load_type,
-            required_date__gte=timezone.now()
-        ).select_related('pickup_location', 'dropoff_location')
+            vehicle_type=user.current_vehicle.vehicle_type,
+            load_type=user.current_vehicle.load_type,
+            required_date__gte=timezone.now(),
+        )
 
-        if pickup_id:
-            posts = posts.filter(pickup_location_id=pickup_id)
+        serializer = DriverPostListSerializer(posts, many=True)
+        return Response(serializer.data)
 
-        if dropoff_id:
-            posts = posts.filter(dropoff_location_id=dropoff_id)
 
-        if date_from and date_to:
-            posts = posts.filter(required_date__date__range=[date_from, date_to])
+# 🚚 DRIVER: Posts Taken by Him
+class DriverTakenPostsView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        results = []
+    def get(self, request):
+        user = request.user
 
-        for post in posts:
-            distance = haversine_distance(
-                driver.current_latitude,
-                driver.current_longitude,
-                post.pickup_location.latitude,
-                post.pickup_location.longitude
+        if user.user_type != "driver":
+            return Response(
+                {"detail": "Driver access only"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-            results.append({
-                "id": post.id,
-                "post_code": post.post_code,
-                "pickup": post.pickup_location.name,
-                "dropoff": post.dropoff_location.name,
-                "required_date": post.required_date,
-                "distance_km": distance
-            })
+        if user.status == "suspended":
+            return Response(
+                {"detail": "Your account is suspended"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        results.sort(key=lambda x: x['distance_km'])
-        return Response(results)
+        posts = Post.objects.filter(
+            status="taken",
+            driver=user,
+        )
+
+        serializer = DriverPostListSerializer(posts, many=True)
+        return Response(serializer.data)
+
+
+# 🚚 DRIVER: Finished Posts (HISTORY)
+class DriverFinishedPostsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.user_type != "driver":
+            return Response(
+                {"detail": "Driver access only"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if user.status == "suspended":
+            return Response(
+                {"detail": "Your account is suspended"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        posts = Post.objects.filter(
+            status="Finished",
+            driver=user,
+        )
+
+        serializer = DriverFinishedPostSerializer(posts, many=True)
+        return Response(serializer.data)

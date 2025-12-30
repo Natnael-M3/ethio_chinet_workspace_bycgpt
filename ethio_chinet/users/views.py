@@ -6,41 +6,20 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import User
-from .serializers import SendOTPSerializer
-from .serializers import VerifyOTPSerializer
-from rest_framework.permissions import AllowAny
-import random
-from rest_framework.permissions import IsAuthenticated  # <--- import this
-
-# users/views.py
-import random
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
 from .serializers import SendOTPSerializer, VerifyOTPSerializer
-
-# users/views.py
 import random
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
-from .serializers import SendOTPSerializer, VerifyOTPSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
-
 from rest_framework import viewsets, permissions
-from .models import User
 from .serializers import UserSerializer
+from django.shortcuts import get_object_or_404
+from .serializers import UserStatusUpdateSerializer
+from .permissions import IsAdminUserCustom
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
     return {
@@ -72,6 +51,12 @@ class OTPSignUpAPIView(APIView):
                  {"error":"you can't make user type admin"},
                  status=status.HTTP_400_BAD_REQUEST
             )
+        if user_type not in ["customer", "driver"]:
+            return Response(
+                 {"error": "user_type must be either 'customer' or 'driver'"},
+                 status=status.HTTP_400_BAD_REQUEST
+            )
+
         if User.objects.filter(phone_number=phone).exists():
             return Response(
                 {"message": "User already registered. Use login with OTP."},
@@ -152,13 +137,6 @@ class VerifyOTPView(APIView):
             "user_type": user.user_type
         }, status=status.HTTP_200_OK)
 
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -283,3 +261,32 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action in ['partial_update', 'update', 'destroy']:
             return [permissions.IsAdminUser()]
         return super().get_permissions()
+class AdminUserStatusUpdateView(APIView):
+    permission_classes = [IsAdminUserCustom]
+
+    def patch(self, request, id):
+        user = get_object_or_404(User, id=id)
+
+        # ❌ Admin cannot suspend another admin
+        if user.is_staff:
+            return Response(
+                {"detail": "You cannot change admin status."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = UserStatusUpdateSerializer(
+            user, data=request.data, partial=True
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "User status updated successfully",
+                    "user_id": user.id,
+                    "status": user.status
+                },
+                status=status.HTTP_200_OK
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

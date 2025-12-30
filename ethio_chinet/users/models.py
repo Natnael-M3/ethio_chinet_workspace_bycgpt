@@ -116,13 +116,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
-    current_vehicle = models.ForeignKey(
-        'vehicles.Vehicle',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='drivers'
-    )
+    # current_vehicle = models.ForeignKey(
+    #     'vehicles.Vehicle',
+    #     null=True,
+    #     blank=True,
+    #     on_delete=models.SET_NULL,
+    #     related_name='drivers'
+    # )
 
     # 🔐 Django auth fields
     is_staff = models.BooleanField(default=False)

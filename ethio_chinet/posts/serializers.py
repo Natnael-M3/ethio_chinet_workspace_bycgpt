@@ -1,18 +1,24 @@
 from rest_framework import serializers
 from .models import Post
-import random
-import string
-from datetime import timedelta
+from loadtypes.models import LoadType
+from vehicles.models import VehicleType
+
+from rest_framework import serializers
+from .models import Post
+from luggages.models import Luggage
 from django.utils import timezone
-
-
-def generate_post_code():
-    return ''.join(
-        random.choices(string.ascii_uppercase + string.digits, k=6)
+import datetime
+# from loadtypes.models import LoadType
+from rest_framework import serializers
+from .models import Post
+class PostCreateSerializer(serializers.ModelSerializer):
+    luggage = serializers.PrimaryKeyRelatedField(
+        queryset=Luggage.objects.all()
+    )
+    load_type = serializers.PrimaryKeyRelatedField(
+        queryset=LoadType.objects.all()
     )
 
-
-class PostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
@@ -20,60 +26,79 @@ class PostCreateSerializer(serializers.ModelSerializer):
             'dropoff_location',
             'vehicle_type',
             'load_type',
+            'luggage',
             'required_date',
+            'description'
         ]
 
     def validate_required_date(self, value):
         now = timezone.now()
-
-        if value < now + timedelta(hours=2):
+        if value < now + datetime.timedelta(hours=2):
             raise serializers.ValidationError(
-                "Required date must be at least 2 hours from now"
+                "Required date must be at least 2 hours from now."
             )
-
-        if value > now + timedelta(days=3):
-            raise serializers.ValidationError(
-                "Required date cannot exceed 3 days"
-            )
-
         return value
 
-    def create(self, validated_data):
-        request = self.context['request']
-        user = request.user
-
-        # 🔒 BRD ENFORCEMENT
-        if user.user_type != 'customer':
-            raise serializers.ValidationError(
-                "Only customers can create posts"
-            )
-
-        post = Post.objects.create(
-            customer=user,
-            post_code=generate_post_code(),
-            expires_at=validated_data['required_date'],
-            **validated_data
-        )
-
-        return post
 
 
 class PostListSerializer(serializers.ModelSerializer):
-    pickup_location_name = serializers.CharField(
-        source='pickup_location.location_name', read_only=True
-    )
-    dropoff_location_name = serializers.CharField(
-        source='dropoff_location.location_name', read_only=True
-    )
+    customer_name = serializers.CharField(source='customer.get_full_name', read_only=True)
+    driver_name = serializers.CharField(source='driver.get_full_name', read_only=True)
+    assigned_admin_name = serializers.CharField(source='assigned_admin.get_full_name', read_only=True)
 
+    class Meta:
+        model = Post
+        fields = '__all__'
+class PostDriverListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
             'id',
             'post_code',
-            'pickup_location_name',
-            'dropoff_location_name',
+            'pickup_location',
+            'dropoff_location',
+            'vehicle_type',
+            'load_type',
+            'luggage',
             'required_date',
-            'status',     
-            'is_expired'  
+            'status',
+        ]
+
+
+
+class DriverPostListSerializer(serializers.ModelSerializer):
+    pickup_location = serializers.StringRelatedField()
+    dropoff_location = serializers.StringRelatedField()
+    vehicle_type = serializers.StringRelatedField()
+    load_type = serializers.StringRelatedField()
+    luggage = serializers.StringRelatedField()
+
+    class Meta:
+        model = Post
+        fields = [
+            "id",
+            "post_code",
+            "pickup_location",
+            "dropoff_location",
+            "vehicle_type",
+            "load_type",
+            "luggage",
+            "required_date",
+            "status",
+        ]
+        
+class DriverFinishedPostSerializer(serializers.ModelSerializer):
+    pickup_location = serializers.StringRelatedField()
+    dropoff_location = serializers.StringRelatedField()
+    luggage = serializers.StringRelatedField()
+
+    class Meta:
+        model = Post
+        fields = [
+            "post_code",
+            "pickup_location",
+            "dropoff_location",
+            "luggage",
+            "required_date",
+            "status",
         ]

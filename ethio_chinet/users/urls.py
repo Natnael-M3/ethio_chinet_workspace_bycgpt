@@ -2,7 +2,7 @@ from django.urls import path
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import UserViewSet
-
+from .views import AdminUserStatusUpdateView
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
 
@@ -34,5 +34,10 @@ urlpatterns = [
     # Driver utilities
     path('driver/update-location/', UpdateDriverLocationView.as_view()),
     path('', include(router.urls)),
-
+    # ADMIN privilege
+    path(
+        "admin/users/<int:id>/status/",
+        AdminUserStatusUpdateView.as_view(),
+        name="admin-user-status-update"
+    )
 ]
