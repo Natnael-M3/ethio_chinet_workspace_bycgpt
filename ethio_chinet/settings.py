@@ -50,13 +50,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'users',
     'payments',
-    'posts',
     'vehicles',
-    'ratings',
     'locations',
     'luggages',
-    'loadtypes'
-    
+    'loadtypes',
+    'posts.apps.PostsConfig',
+    'ratings',
 ]
 
 AUTH_USER_MODEL = 'users.User'

@@ -6,7 +6,7 @@ from rest_framework_simplejwt.views import (
 )
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls')),
+    # path('api/users/', include('users.urls')),
     path('api/posts/', include('posts.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # POST: get access & refresh tokens
@@ -16,8 +16,10 @@ urlpatterns = [
     path('api/vehicles/', include('vehicles.urls')),
     #luggages endpoint
     path('api/luggage/', include('luggages.urls')),
-    #load types endpoint
     path('api/load-types/', include('loadtypes.urls')),
     path("api/", include("users.urls")),
-
+    path('api/users/', include('users.urls')),          # normal users
+    path('api/admin/', include('users.admin_urls')),
+    # project/urls.py
+    path('api/admin/', include('posts.admin_urls')),
 ]

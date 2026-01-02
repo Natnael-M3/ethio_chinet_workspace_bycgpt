@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import RecordFinishedPaymentView
+from .views import AdminRecordPaymentView
 
 urlpatterns = [
-    path('record/<int:post_id>/', RecordFinishedPaymentView.as_view()),
+    path('record-payment/', AdminRecordPaymentView.as_view()),
 ]

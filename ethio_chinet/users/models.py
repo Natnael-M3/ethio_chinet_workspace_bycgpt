@@ -8,40 +8,6 @@ import uuid
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, phone_number, password=None, **extra_fields):
-        if not phone_number:
-            raise ValueError("Phone number is required")
-
-        user = self.model(phone_number=phone_number, **extra_fields)
-        if password:
-            user.set_password(password)
-
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, phone_number, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("user_type", "admin")
-
-        return self.create_user(phone_number, password, **extra_fields)
-
-    def create_user(self, phone_number, password=None, **extra_fields):
-        if not phone_number:
-            raise ValueError("Phone number is required")
-
-        user = self.model(phone_number=phone_number, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, phone_number, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('user_type', 'admin')
-
-        return self.create_user(phone_number, password, **extra_fields)
-
     def create_user(self, phone_number, password=None, first_name=None, last_name=None, **extra_fields):
         if not phone_number:
             raise ValueError("Phone number is required")
@@ -52,37 +18,27 @@ class UserManager(BaseUserManager):
             last_name=last_name,
             **extra_fields
         )
-        user.set_password(password)
+
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()  # OTP-only users
+
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, phone_number, password=None, first_name=None, last_name=None, **extra_fields):
+    def create_superuser(self, phone_number, password, first_name, last_name, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('user_type', 'admin')
 
-        if first_name is None:
-            raise ValueError('Superuser must have a first name.')
-        if last_name is None:
-            raise ValueError('Superuser must have a last name.')
-
-        return self.create_user(phone_number, password, first_name=first_name, last_name=last_name, **extra_fields)
-
-    def create_user(self, phone_number, password=None, **extra_fields):
-        if not phone_number:
-            raise ValueError("Phone number is required")
-
-        user = self.model(phone_number=phone_number, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, phone_number, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('user_type', 'admin')
-
-        return self.create_user(phone_number, password, **extra_fields)
+        return self.create_user(
+            phone_number,
+            password,
+            first_name=first_name,
+            last_name=last_name,
+            **extra_fields
+        )
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -116,13 +72,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
-    # current_vehicle = models.ForeignKey(
-    #     'vehicles.Vehicle',
-    #     null=True,
-    #     blank=True,
-    #     on_delete=models.SET_NULL,
-    #     related_name='drivers'
-    # )
 
     # 🔐 Django auth fields
     is_staff = models.BooleanField(default=False)

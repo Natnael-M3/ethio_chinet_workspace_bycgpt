@@ -20,6 +20,13 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework import generics, permissions
+from .serializers import AdminRegisterCustomerSerializer
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import AdminVerifyCustomerOTPSerializer
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
     return {
@@ -118,24 +125,22 @@ class VerifyOTPView(APIView):
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone = serializer.validated_data['phone_number']
-        otp = str(serializer.validated_data['otp'])
-        try:
-            user = User.objects.get(phone_number=phone, otp=otp)
-        except User.DoesNotExist:
-            return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.save()
 
-        # OTP is correct, clear OTP and mark logged in
-        user.otp = None
-        user.is_logged_in = True
-        user.save()
+        response = {
+            "detail": "Customer verified successfully",
+            "customer_id": user.id,
+            "phone_number": user.phone_number
+        }
 
-        tokens = get_tokens_for_user(user)
-        return Response({
-            "access": tokens["access"],
-            "refresh": tokens["refresh"],
-            "user_type": user.user_type
-        }, status=status.HTTP_200_OK)
+        # ✅ issue tokens ONLY if requested (mobile app)
+        if request.data.get("issue_token", False):
+            refresh = RefreshToken.for_user(user)
+            response["access"] = str(refresh.access_token)
+            response["refresh"] = str(refresh)
+
+        return Response(response, status=status.HTTP_200_OK)
+
 
 
 class LogoutView(APIView):
@@ -263,7 +268,8 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 class AdminUserStatusUpdateView(APIView):
     permission_classes = [IsAdminUserCustom]
-
+    def patch(self, request, id):
+        print("🔥 PATCH CALLED")
     def patch(self, request, id):
         user = get_object_or_404(User, id=id)
 
@@ -290,3 +296,70 @@ class AdminUserStatusUpdateView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
+
+from .serializers import (
+    AdminRegisterCustomerSerializer,
+    VerifyOTPSerializer
+)
+
+
+class AdminRegisterCustomerView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = AdminRegisterCustomerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(
+            {
+                "message": "Customer registered successfully. OTP sent.",
+                "phone_number": user.phone_number
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+class AdminVerifyCustomerOTPView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = AdminVerifyCustomerOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(
+            {
+                "message": "Customer verified successfully by admin",
+                "customer_id": user.id,
+                "phone_number": user.phone_number
+            },
+            status=status.HTTP_200_OK
+        )
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import AdminLoginCustomerSerializer
+
+class AdminLoginCustomerView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        serializer = AdminLoginCustomerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(
+            {
+                "message": "OTP sent to customer phone number",
+                "customer_id": user.id,
+                "phone_number": user.phone_number
+            },
+            status=status.HTTP_200_OK
+        )
+

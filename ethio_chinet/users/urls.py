@@ -3,12 +3,14 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import UserViewSet
 from .views import AdminUserStatusUpdateView
-router = DefaultRouter()
-router.register(r'users', UserViewSet, basename='user')
+from .views import AdminRegisterCustomerView
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+# router = DefaultRouter()
+# router.register(r'users', UserViewSet, basename='user')
+
+# urlpatterns = [
+#     path('', include(router.urls)),
+# ]
 
 from .views import (
     OTPSignUpAPIView,
@@ -39,5 +41,5 @@ urlpatterns = [
         "admin/users/<int:id>/status/",
         AdminUserStatusUpdateView.as_view(),
         name="admin-user-status-update"
-    )
+    ),
 ]

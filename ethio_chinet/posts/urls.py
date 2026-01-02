@@ -10,6 +10,7 @@ from .views import (
     DriverAvailablePostsView,
     DriverTakenPostsView,
     DriverFinishedPostsView,
+    DriverSelfRatingView
 )
 
 urlpatterns = [
@@ -23,4 +24,6 @@ urlpatterns = [
     path("driver/available/", DriverAvailablePostsView.as_view()),
     path("driver/taken/", DriverTakenPostsView.as_view()),
     path("driver/finished/", DriverFinishedPostsView.as_view()),
+    path('my-rating/', DriverSelfRatingView.as_view(), name='driver-self-rating'),
+    # path('admin-create-customer-post/', AdminCreateCustomerPostView.as_view(), name='admin-create-customer-post'),
 ]

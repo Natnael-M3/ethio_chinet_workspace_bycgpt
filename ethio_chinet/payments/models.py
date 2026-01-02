@@ -1,24 +1,21 @@
 from django.db import models
+from users.models import User
+from posts.models import Post
 
 
-class PostPayment(models.Model):
+class Payment(models.Model):
     post = models.OneToOneField(
-        'posts.Post',
+        Post,
         on_delete=models.CASCADE,
         related_name='payment'
     )
-
     admin = models.ForeignKey(
-        'users.User',
-        on_delete=models.CASCADE
+        User,
+        on_delete=models.CASCADE,
+        limit_choices_to={'user_type': 'admin'}
     )
-
-    finished_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2
-    )
-
-    recorded_at = models.DateTimeField(auto_now_add=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Payment for {self.post.post_code}"

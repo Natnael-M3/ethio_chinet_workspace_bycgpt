@@ -3,6 +3,7 @@ from django.conf import settings
 import uuid
 from luggages.models import Luggage
 from loadtypes.models import LoadType
+from ratings.models import DriverRating
 class Post(models.Model):
     STATUS_CHOICES = [
         ('posted', 'Posted'),

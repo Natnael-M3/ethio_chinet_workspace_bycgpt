@@ -17,4 +17,6 @@ router.register(r'', VehicleViewSet, basename='vehicle')  # driver endpoint
 
 urlpatterns = [
     path('', include(router.urls)),
+    
+   
 ]
