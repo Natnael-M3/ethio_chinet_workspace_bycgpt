@@ -1,4 +1,7 @@
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     PermissionsMixin,
@@ -47,12 +50,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('driver', 'Driver'),
         ('admin', 'Admin'),
     )
-
+    is_online = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, unique=True)
     first_name = models.CharField(max_length=255,null=True, blank=True)
     last_name = models.CharField(max_length=255,null=True, blank=True)
     otp = models.CharField(max_length=6, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+
     
     user_type = models.CharField(
         max_length=20,
@@ -89,7 +94,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     current_latitude = models.FloatField(null=True, blank=True)
     current_longitude = models.FloatField(null=True, blank=True)
     location_updated_at = models.DateTimeField(null=True, blank=True)
-
+    last_seen_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -101,3 +106,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.phone_number
+@property
+def is_online(self):
+    if not self.last_seen_at:
+        return False
+    return timezone.now() - self.last_seen_at <= timedelta(minutes=5)

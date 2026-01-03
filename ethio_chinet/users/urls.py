@@ -1,45 +1,69 @@
-from django.urls import path
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet
-from .views import AdminUserStatusUpdateView
-from .views import AdminRegisterCustomerView
-
-# router = DefaultRouter()
-# router.register(r'users', UserViewSet, basename='user')
-
-# urlpatterns = [
-#     path('', include(router.urls)),
-# ]
 
 from .views import (
+    # OTP & Auth
     OTPSignUpAPIView,
     OTPLoginAPIView,
     VerifyOTPView,
-    OTPLoginAPIView,
+    LogoutView,
+
+    # Admin
     AdminLoginAPIView,
+    AdminUserStatusUpdateView,
+    AdminRegisterCustomerView,
+
+    # Driver
     UpdateDriverLocationView,
-    LogoutView, 
+
+    # ViewSets
+    UserViewSet,
 )
+
+# -----------------------------
+# ROUTER
+# -----------------------------
 router = DefaultRouter()
 router.register(r'', UserViewSet, basename='user')
-urlpatterns = [
-    # OTP FLOW (Customer / Driver)
-    
-    path("signup/", OTPSignUpAPIView.as_view(), name="otp_signup"),
-    path("login/", OTPLoginAPIView.as_view(), name="otp_login"),
-    path("verify-otp/", VerifyOTPView.as_view(), name="verify_otp"),
-    path("logout/", LogoutView.as_view(), name="logout"),
-    # ADMIN LOGIN
-    path('admin/login/', AdminLoginAPIView.as_view(), name='admin-login'),
 
-    # Driver utilities
-    path('driver/update-location/', UpdateDriverLocationView.as_view()),
-    path('', include(router.urls)),
-    # ADMIN privilege
+# -----------------------------
+# URL PATTERNS
+# -----------------------------
+urlpatterns = [
+
+    # =========================
+    # OTP FLOW (Customer / Driver)
+    # =========================
+    path("signup/", OTPSignUpAPIView.as_view(), name="otp-signup"),
+    path("login/", OTPLoginAPIView.as_view(), name="otp-login"),
+    path("verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+
+    # =========================
+    # ADMIN AUTH
+    # =========================
+    path("admin/login/", AdminLoginAPIView.as_view(), name="admin-login"),
+
+    # =========================
+    # DRIVER FEATURES
+    # =========================
+    path(
+        "driver/update-location/",
+        UpdateDriverLocationView.as_view(),
+        name="driver-update-location"
+    ),
+
+    # =========================
+    # ADMIN PRIVILEGES
+    # =========================
     path(
         "admin/users/<int:id>/status/",
         AdminUserStatusUpdateView.as_view(),
         name="admin-user-status-update"
     ),
+
+    # =========================
+    # USER CRUD (ADMIN ONLY)
+    # =========================
+    path("", include(router.urls)),
 ]

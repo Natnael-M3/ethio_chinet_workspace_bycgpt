@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import User
+from django.utils import timezone
+
 import random
 
 
@@ -65,10 +67,22 @@ class VerifyOTPSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_online = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'phone_number', 'status', 'is_staff']
-
+        fields = ['id',
+            'first_name',
+            'last_name',
+            'phone_number',
+            'status',
+            'is_staff',
+            'user_type',
+            'current_latitude',
+            'current_longitude',
+            'last_seen_at',
+            'is_online',]
+    def get_is_online(self, obj):
+        return obj.is_online
     def update(self, instance, validated_data):
         # Prevent non-admins from updating the status
         request = self.context.get('request')
@@ -181,3 +195,48 @@ class AdminLoginCustomerSerializer(serializers.Serializer):
         print(f"[ADMIN LOGIN OTP] {user.phone_number}: {otp}")
 
         return user
+class DriverLocationUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'current_latitude',
+            'current_longitude',
+        ]
+
+    def validate(self, data):
+        user = self.context['request'].user
+
+        if user.user_type != 'driver':
+            raise serializers.ValidationError(
+                "Only drivers can update location"
+            )
+
+        if user.status != 'active':
+            raise serializers.ValidationError(
+                "Suspended drivers cannot update location"
+            )
+
+        return data
+
+    def update(self, instance, validated_data):
+        instance.current_latitude = validated_data.get(
+            'current_latitude', instance.current_latitude
+        )
+        instance.current_longitude = validated_data.get(
+            'current_longitude', instance.current_longitude
+        )
+
+        # 🔥 heartbeat
+        instance.last_seen_at = timezone.now()
+        instance.location_updated_at = timezone.now()
+
+        instance.save(
+            update_fields=[
+                'current_latitude',
+                'current_longitude',
+                'last_seen_at',
+                'location_updated_at'
+            ]
+        )
+
+        return instance
